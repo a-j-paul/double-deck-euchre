@@ -1,3 +1,4 @@
+"""Indiana double deck bid euchre"""
 # https://docs.python.org/3/library/random.html#random.shuffle
 from random import shuffle
 
