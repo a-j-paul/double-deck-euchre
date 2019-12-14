@@ -54,7 +54,7 @@ class Deck:
 
     def dealHand(self, count):
         dealtCards = []
-        for i in range(count):
+        for _i in range(count):
             dealtCards.append(self.cards.pop())
         return dealtCards
 
