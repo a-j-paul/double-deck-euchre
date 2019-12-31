@@ -2,18 +2,22 @@
 # https://docs.python.org/3/library/random.html#random.shuffle
 from random import shuffle
 
-suits = ["Spades", "Clubs", "Hearts", "Diamonds"]
-values = ["9", "10", "Jack", "Queen", "King", "Ace"]
+SUITS = ["Spades", "Clubs", "Hearts", "Diamonds"]
+VALUES = ["9", "10", "Jack", "Queen", "King", "Ace"]
 names = ["Me", "P1", "Partner", "P2"]
 
-# card class to contain value and suit
+
 class Card:
-    def __init__(self, value, suit):
+    """
+    Cards have suit and value
+    """
+
+    def __init__(self, value: str, suit: str):
         self.value = value
         self.suit = suit
 
     def __str__(self):
-        return "{} of {}".format(self.value, self.suit)
+        return f"{self.value} of {self.suit}"
 
     def __gt__(self, other):
         # if suit is not trump
@@ -32,12 +36,15 @@ class Card:
         return self.value
 
 
-# deck of cards
 class Deck:
+    """
+    All cards in 24-card euchre deck
+    """
+
     def __init__(self):
         self.cards = []
-        for suit in suits:
-            for value in values:
+        for suit in SUITS:
+            for value in VALUES:
                 self.cards.append(Card(value, suit))
 
     def __len__(self):
@@ -50,26 +57,41 @@ class Deck:
         return out
 
     def shuffle(self):
+        """
+        Shuffle the deck of cards
+        """
         shuffle(self.cards)
 
-    def dealHand(self, count):
-        dealtCards = []
+    def deal_hand(self, count: int) -> list:
+        """
+        Get list of cards from the deck
+        """
+        dealt_cards = []
         for _i in range(count):
-            dealtCards.append(self.cards.pop())
-        return dealtCards
+            dealt_cards.append(self.cards.pop())
+        return dealt_cards
 
-    def showKitty(self):
+    def show_kitty(self) -> Card:
+        """
+        Return face-up card in the kitty
+        """
         return self.cards[-1]
 
-    def getKitty(self, discarded):
+    def get_kitty(self, discarded: Card) -> Card:
+        """
+        Exchange face-up card in kitty with discarded card
+        """
         kitty = self.cards.pop()
         self.cards.append(discarded)
         return kitty
 
 
-# player
 class Player:
-    def __init__(self, name, cards, isDealer):
+    """
+    Player has a hand of cards
+    """
+
+    def __init__(self, name: str, cards: list, isDealer: bool):
         self.name = name
         self.cards = cards
         self.isDealer = isDealer
@@ -78,17 +100,30 @@ class Player:
         return self.name
 
     def get_card(self, index):
-        chosenCard = self.cards[index]
+        """
+        Remove chosen card from hand
+        """
+        chosen_card = self.cards[index]
         del self.cards[index]
-        return chosenCard
+        return chosen_card
 
     def set_card(self, card):
+        """
+        Add card to hand
+        """
         self.cards.append(card)
 
     def is_dealer(self):
         return self.isDealer
 
+    def sort_cards(self):
+        """
+        Sort cards according to suit
+        """
+        self.cards = sorted(self.cards, key=lambda card: str(card).split("of")[1])
+
     def __str__(self):
+        self.sort_cards()
         out = self.name + "->\t"
         for i, card in enumerate(self.cards):
             out += str(i + 1) + ": " + str(card) + "\t"
@@ -99,9 +134,12 @@ class Player:
 
 
 def bid_kitty(players):
+    """
+    Establish trump suit through kitty or open bidding
+    """
     trump = ""
     # ask each player if they wish for the dealer to pick the card up
-    print("Kitty: " + str(deck.showKitty()))
+    print("Kitty: " + str(deck.show_kitty()))
     for player in players:
         print(player)
         response = input(
@@ -114,11 +152,14 @@ def bid_kitty(players):
             break
     # begin open bidding
     if trump == "":
-        trump = bid_open(deck.showKitty().get_suit())
+        trump = bid_open(deck.show_kitty().get_suit())
     return trump
 
 
 def left_suit():
+    """
+    Return suit of the left bower
+    """
     if trump == "Hearts":
         return "Diamonds"
     if trump == "Diamonds":
@@ -134,6 +175,9 @@ def left_bower(card):
 
 
 def pickup_trump():
+    """
+    Have dealer pick up face-up kitty card and discard one of their cards
+    """
     print(players[3])
     response = -1
     while response >= len(players[3]) or response < 0:
@@ -147,13 +191,16 @@ def pickup_trump():
             - 1
         )
     discarded = players[3].get_card(response)
-    pickup = deck.getKitty(discarded)
+    pickup = deck.get_kitty(discarded)
     players[3].set_card(pickup)
     print(players[3])
     return pickup.get_suit()
 
 
-def bid_open(forbiddenSuit):
+def bid_open(forbiddenSuit: str):
+    """
+    Open bidding to establish trump suit. Suit of card on top of kitty that was rejected cannot be picked.
+    """
     # ask each player if they wish to declare trump
     for player in players:
         print(player)
@@ -190,7 +237,10 @@ def bid_open(forbiddenSuit):
     return trump
 
 
-def play_round():
+def play_trick():
+    """
+    Play through one trick
+    """
     playedCards = []
     # ask each player to play a card
     for player in players:
@@ -259,35 +309,39 @@ def play_round():
     print("Notice->\tWinning card is " + str(winning) + " by player " + winner)
 
 
-# create deck, shuffle
-deck = Deck()
-deck.shuffle()
+if __name__ == "__main__":
+    # create deck, shuffle
+    deck = Deck()
+    deck.shuffle()
 
-# decide dealer and deal cards to players
-players = []
-dealer = 1
-for i, name in enumerate(names):
-    if i == dealer:
-        players.append(Player("(D)" + name, deck.dealHand(5), True))
-    else:
-        players.append(Player(name, deck.dealHand(5), False))
+    # decide dealer and deal cards to players
+    players = []
+    dealer = 1
+    for i, name in enumerate(names):
+        if i == dealer:
+            players.append(Player("(D)" + name, deck.deal_hand(5), True))
+        else:
+            players.append(Player(name, deck.deal_hand(5), False))
 
-# if dealer is not already last in list of players then move them to end
-if dealer != 3:
-    move = 3 - dealer
-    movedPlayers = []
-    for i in range(move):
-        movedPlayers.append(players.pop())
-    movedPlayers.reverse()
-    for i in range(move):
-        players.insert(0, movedPlayers.pop())
+    # if dealer is not already last in list of players then move them to end
+    if dealer != 3:
+        move = 3 - dealer
+        movedPlayers = []
+        for i in range(move):
+            movedPlayers.append(players.pop())
+        movedPlayers.reverse()
+        for i in range(move):
+            players.insert(0, movedPlayers.pop())
 
-# set trump suit
-print("Notice->\tNaming Trump")
-# trump = bid_kitty(players)
-trump = "Hearts"
-print("Notice->\tTrump is " + trump)
+    # set trump suit
+    print("Notice->\tNaming Trump")
+    trump = bid_kitty(players)
+    # trump = "Hearts"
+    print("Notice->\tTrump is " + trump)
 
-# play a round
-print("Notice->\tRound 1")
-play_round()
+    # play a round
+    print("Notice->\tRound 1")
+    play_trick()
+
+    # TODO: renege check
+    # TODO: score after all tricks are over
