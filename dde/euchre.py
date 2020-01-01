@@ -91,15 +91,15 @@ class Player:
     Player has a hand of cards
     """
 
-    def __init__(self, name: str, cards: list, isDealer: bool):
+    def __init__(self, name: str, cards: list, is_dealer: bool):
         self.name = name
         self.cards = cards
-        self.isDealer = isDealer
+        self.is_dealer = is_dealer
 
     def get_name(self):
         return self.name
 
-    def get_card(self, index):
+    def get_card(self, index: int) -> Card:
         """
         Remove chosen card from hand
         """
@@ -107,20 +107,34 @@ class Player:
         del self.cards[index]
         return chosen_card
 
-    def set_card(self, card):
+    def set_card(self, card: Card):
         """
         Add card to hand
         """
         self.cards.append(card)
 
-    def is_dealer(self):
-        return self.isDealer
+    def dealer(self):
+        return self.is_dealer
 
     def sort_cards(self):
         """
         Sort cards according to suit
         """
         self.cards = sorted(self.cards, key=lambda card: str(card).split("of")[1])
+
+    def get_current_suits(self) -> dict:
+        """
+        Return the quantity of each suit in a player's hand
+        """
+        # create data structure
+        current_suits = {suit: 0 for suit in SUITS}
+
+        for card in self.cards:
+            s = card.get_suit()
+            if left_bower(card):
+                s = trump
+            current_suits[s] = current_suits[s] + 1
+        return current_suits
 
     def __str__(self):
         self.sort_cards()
@@ -133,7 +147,7 @@ class Player:
         return len(self.cards)
 
 
-def bid_kitty(players):
+def bid_kitty(players: list) -> str:
     """
     Establish trump suit through kitty or open bidding
     """
@@ -149,14 +163,15 @@ def bid_kitty(players):
         # send card to dealers hand and have dealer discard
         if response == "y":
             trump = pickup_trump()
+            trump_picker = player.get_name()
             break
     # begin open bidding
     if trump == "":
-        trump = bid_open(deck.show_kitty().get_suit())
-    return trump
+        trump, trump_picker = bid_open(deck.show_kitty().get_suit())
+    return trump, trump_picker
 
 
-def left_suit():
+def left_suit() -> str:
     """
     Return suit of the left bower
     """
@@ -170,14 +185,18 @@ def left_suit():
         return "Spades"
 
 
-def left_bower(card):
+def left_bower(card: Card) -> bool:
+    """
+    Check if card is the left bower
+    """
     return bool(card.get_suit() == left_suit() and card.get_value() == "Jack")
 
 
-def pickup_trump():
+def pickup_trump() -> str:
     """
     Have dealer pick up face-up kitty card and discard one of their cards
     """
+    # hard coded to player 3
     print(players[3])
     response = -1
     while response >= len(players[3]) or response < 0:
@@ -197,7 +216,7 @@ def pickup_trump():
     return pickup.get_suit()
 
 
-def bid_open(forbiddenSuit: str):
+def bid_open(forbidden_suit: str) -> str:
     """
     Open bidding to establish trump suit. Suit of card on top of kitty that was rejected cannot be picked.
     """
@@ -219,7 +238,7 @@ def bid_open(forbiddenSuit: str):
             elif "diamond" in response:
                 response = "Diamonds"
             # dealer must declare suit if all other players have passed
-            elif response == "" and player.is_dealer():
+            elif response == "" and player.dealer():
                 response = ""
             # pass to next player
             elif response == "":
@@ -229,21 +248,22 @@ def bid_open(forbiddenSuit: str):
                 response = ""
 
             # suit of card turned down from kitty cannot become trump
-            if response == forbiddenSuit:
+            if response == forbidden_suit:
                 response = ""
         if response != "":
             trump = response
+            trump_picker = player.get_name()
             break
-    return trump
+    return trump, trump_picker
 
 
-def play_trick():
+def play_trick() -> int:
     """
     Play through one trick
     """
     playedCards = []
     # ask each player to play a card
-    for player in players:
+    for i, player in enumerate(players):
         print(player)
         response = -1
         while response >= len(player) or response < 0:
@@ -258,16 +278,35 @@ def play_trick():
                 )
                 - 1
             )
+            # check card for renege
+            if i > 0:
+                current_suits = player.get_current_suits()
+                # if player has card(s) matching the suit of the first card played
+                # then they must follow suit
+                if current_suits[suit] > 0:
+                    # remove card from hand to check suit
+                    try:
+                        played = player.get_card(response)
+                    except IndexError:
+                        response = -1
+                    else:
+                        if played.get_suit() != suit:
+                            response = -1
+                        # put card back in hand
+                        player.set_card(played)
+                        player.sort_cards()
+
         played = player.get_card(response)
         playedCards.append(played)
         print(player.get_name() + "->\tPlayed: " + str(played))
 
-    # store first card played
-    winning = playedCards[0]
-    winningPlayer = 0
-    suit = playedCards[0].get_suit()
-    isLeft = left_bower(playedCards[0])
-    isWinningTrump = bool(suit == trump or isLeft)
+        # store first card played
+        if i == 0:
+            winning = playedCards[0]
+            winningPlayer = 0
+            suit = playedCards[0].get_suit()
+            isLeft = left_bower(playedCards[0])
+            isWinningTrump = bool(suit == trump or isLeft)
 
     # find winning card of the round
     for i, card in enumerate(playedCards):
@@ -307,6 +346,7 @@ def play_trick():
 
     winner = players[winningPlayer].get_name()
     print("Notice->\tWinning card is " + str(winning) + " by player " + winner)
+    return winningPlayer
 
 
 if __name__ == "__main__":
@@ -335,13 +375,32 @@ if __name__ == "__main__":
 
     # set trump suit
     print("Notice->\tNaming Trump")
-    trump = bid_kitty(players)
-    # trump = "Hearts"
+    trump, trump_picker = bid_kitty(players)
     print("Notice->\tTrump is " + trump)
 
-    # play a round
-    print("Notice->\tRound 1")
-    play_trick()
+    # play a hand
+    hand_score = {"Me": 0, "Computer": 0}
+    for i in range(1, 6):
+        print(f"Notice->\tTrick {i}")
+        winner = play_trick()
 
-    # TODO: renege check
+        # TODO: reorder sequence of players based upon winner
+        if winner % 2 == 0:
+            hand_score["Me"] = hand_score["Me"] + 1
+        else:
+            hand_score["Computer"] = hand_score["Computer"] + 1
+
     # TODO: score after all tricks are over
+    # TODO: add loner
+
+    # if trump picker score < 3
+    # other team score + 2
+
+    # if trump picker score >= 3 and < 5
+    # trump picker score + 1
+
+    # if trump picker score == 5 and loner
+    # trump picker score + 4
+
+    # if trump picker score == 5
+    # trump picker score + 2
