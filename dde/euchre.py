@@ -8,6 +8,7 @@ VALUES = ["9", "10", "Jack", "Queen", "King", "Ace"]
 PLAYER_NAMES = ["Me", "P1", "Partner", "P2"]
 WINNING_SCORE = 52
 trump = None
+# first suit played for a given trick
 first_suit = None
 
 
@@ -20,10 +21,10 @@ class Card:
         self.value = value
         self.suit = suit
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.value} of {self.suit}"
 
-    def __gt__(self, other):
+    def __gt__(self, other: Card) -> bool:
         # left bower trickery
         if trump == "Hearts":
             left = "Diamonds"
@@ -36,28 +37,35 @@ class Card:
         else:
             left = None
 
-        if self.suit == left:
+        if self.suit == left and self.value == "Jack":
             self.suit = trump
             self.value = "Left"
-        if other.suit == left:
+        if other.suit == left and self.value == "Jack":
             other.suit = trump
             other.value = "Left"
 
         # high and low trump
-        if trump == "Low":
-            values = ["Ace", "King", "Queen", "Jack", "10", "9"]
-            return values.index(self.value) > values.index(other.value)
-        if trump == "High":
-            values = ["9", "10", "Jack", "Queen", "King", "Ace"]
-            return values.index(self.value) > values.index(other.value)
+        if self.suit == first_suit and other.suit == first_suit:
+            if trump == "Low":
+                values = ["Ace", "King", "Queen", "Jack", "10", "9"]
+                return values.index(self.value) > values.index(other.value)
+            if trump == "High":
+                values = ["9", "10", "Jack", "Queen", "King", "Ace"]
+                return values.index(self.value) > values.index(other.value)
+        elif self.suit != first_suit and other.suit != first_suit:
+            return False
+        elif self.suit == first_suit and other.suit != first_suit:
+            return True
+        elif self.suit != first_suit and other.suit == first_suit:
+            return False
 
         # if both suits are not trump
         if self.suit != trump and other.suit != trump:
             if self.suit == first_suit and other.suit == first_suit:
                 pass
             elif self.suit != first_suit and other.suit != first_suit:
-                # TODO: don't think this pass is possible
-                pass
+                return False
+
             elif self.suit == first_suit and other.suit != first_suit:
                 return True
             elif self.suit != first_suit and other.suit == first_suit:
@@ -75,10 +83,10 @@ class Card:
         elif self.suit != trump and other.suit == trump:
             return False
 
-    def get_suit(self):
+    def get_suit(self) -> str:
         return self.suit
 
-    def get_value(self):
+    def get_value(self) -> str:
         return self.value
 
 
@@ -89,21 +97,21 @@ class Deck:
 
     def __init__(self):
         self.cards = []
-        for i in range(2):
+        for _ in range(2):
             for suit in SUITS:
                 for value in VALUES:
                     self.cards.append(Card(value, suit))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.cards)
 
-    def __str__(self):
+    def __str__(self) -> str:
         out = ""
         for card in self.cards:
             out += str(card) + "\n"
         return out
 
-    def shuffle(self):
+    def shuffle(self) -> None:
         """
         Shuffle the deck of cards
         """
@@ -129,7 +137,7 @@ class Player:
         self.cards = cards
         self.is_dealer = is_dealer
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.name
 
     def get_card(self, index: int) -> Card:
@@ -140,30 +148,61 @@ class Player:
         del self.cards[index]
         return chosen_card
 
-    def set_card(self, card: Card):
+    def set_card(self, card: Card) -> None:
         """
         Add card to hand
         """
         self.cards.append(card)
 
-    def set_cards(self, cards: list):
+    def set_cards(self, cards: list) -> None:
         self.cards = cards
 
-    def sort_cards(self):
+    def sort_cards(self) -> None:
         """
         Sort cards according to suit
         """
-        # TODO: sort based on current trump setting
-        self.cards = sorted(self.cards, key=lambda card: str(card).split("of")[1])
+        # left bower trickery
+        if trump == "Hearts":
+            left = "Diamonds"
+        elif trump == "Diamonds":
+            left = "Hearts"
+        elif trump == "Spades":
+            left = "Clubs"
+        elif trump == "Clubs":
+            left = "Spades"
+        else:
+            left = None
+        for card in self.cards:
+            if card.suit == left and card.value == "Jack":
+                card.suit = trump
+                card.value = "Left"
 
-    def __str__(self):
+        def sort_order(card: Card) -> int:
+            if card.suit == trump:
+                values = ["9", "10", "Queen", "King", "Ace", "Left", "Jack"]
+                return values.index(card.value)
+            else:
+                values = ["9", "10", "Jack", "Queen", "King", "Ace"]
+                return values.index(card.value)
+
+        self.cards = sorted(
+            self.cards, key=lambda card: (str(card).split("of")[1], sort_order(card))
+        )
+
+        # change left name back
+        for card in self.cards:
+            if card.value == "Left":
+                card.suit = left
+                card.value = "Jack"
+
+    def __str__(self) -> str:
         self.sort_cards()
         out = self.name + "->\t"
         for i, card in enumerate(self.cards):
             out += str(i + 1) + ": " + str(card) + "\t"
         return out
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.cards)
 
 
@@ -172,13 +211,20 @@ def get_bid() -> dict:
     Get bid from player
     """
     bid = {}
-    # TODO: sanitize input
-    bid["value"] = input(
-        "Select bid value (1-12) or type 'pass' to pass or 'alone' to go alone: "
-    )
-    # cast value to int
-    if bid["value"].isnumeric():
-        bid["value"] = int(bid["value"])
+
+    def check_input(input_string: str):
+        # cast value to int
+        if input_string.isnumeric():
+            input_string = int(input_string)
+
+        return input_string
+
+    bid["value"] = None
+    while bid["value"] is None:
+        bid["value"] = input(
+            "Select bid value (1-12) or type 'pass' to pass or 'alone' to go alone: "
+        )
+        bid["value"] = check_input(bid["value"])
 
     # if bid was not passed then get suit
     if bid["value"] != "pass":
@@ -189,29 +235,45 @@ def get_bid() -> dict:
     return bid
 
 
-def highest_bidder_drops_3_cards(player):
+def highest_bidder_drops_3_cards(player: Player):
     """
     When going alone the bidder must discard three cards
     """
-    print(player)
-    # TODO: sanitize inputs
-    removed_cards = input("Type numbers of 3 cards to get rid of separated by commas: ")
-    removed_cards = [int(x) for x in removed_cards.split(",")]
-    removed_cards = [x - i - 1 for i, x in enumerate(removed_cards)]
+
+    def check_inputs(input_string: str) -> list:
+        removed_cards = [int(x) for x in input_string.split(",")]
+        removed_cards = [x - i - 1 for i, x in enumerate(removed_cards)]
+        return removed_cards
+
+    removed_cards = None
+    while removed_cards is None:
+        removed_cards = input(
+            "Type numbers of 3 cards to get rid of separated by commas: "
+        )
+        removed_cards = check_inputs(removed_cards)
+
     for removed in removed_cards:
         player.get_card(removed)
     print(player)
 
 
-def partner_provides_3_cards(partner, bidder):
+def partner_provides_3_cards(partner: Player, bidder: Player):
     """
     When going alone the partern must provide three cards to the bidder
     """
-    print(partner)
-    # TODO: sanitize inputs
-    removed_cards = input("Type numbers of 3 cards to get rid of separated by commas: ")
-    removed_cards = [int(x) for x in removed_cards.split(",")]
-    removed_cards = [x - i - 1 for i, x in enumerate(removed_cards)]
+
+    def check_inputs(input_string: str) -> list:
+        removed_cards = [int(x) for x in input_string.split(",")]
+        removed_cards = [x - i - 1 for i, x in enumerate(removed_cards)]
+        return removed_cards
+
+    removed_cards = None
+    while removed_cards is None:
+        removed_cards = input(
+            "Type numbers of 3 cards to get rid of separated by commas: "
+        )
+        removed_cards = check_inputs(removed_cards)
+
     for removed in removed_cards:
         c = partner.get_card(removed)
         bidder.set_card(c)

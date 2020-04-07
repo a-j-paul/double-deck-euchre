@@ -37,28 +37,35 @@ class Card:
         else:
             left = None
 
-        if self.suit == left:
+        if self.suit == left and self.value == "Jack":
             self.suit = trump
             self.value = "Left"
-        if other.suit == left:
+        if other.suit == left and self.value == "Jack":
             other.suit = trump
             other.value = "Left"
 
         # high and low trump
-        if trump == "Low":
-            values = ["Ace", "King", "Queen", "Jack", "10", "9"]
-            return values.index(self.value) > values.index(other.value)
-        if trump == "High":
-            values = ["9", "10", "Jack", "Queen", "King", "Ace"]
-            return values.index(self.value) > values.index(other.value)
+        if self.suit == first_suit and other.suit == first_suit:
+            if trump == "Low":
+                values = ["Ace", "King", "Queen", "Jack", "10", "9"]
+                return values.index(self.value) > values.index(other.value)
+            if trump == "High":
+                values = ["9", "10", "Jack", "Queen", "King", "Ace"]
+                return values.index(self.value) > values.index(other.value)
+        elif self.suit != first_suit and other.suit != first_suit:
+            return False
+        elif self.suit == first_suit and other.suit != first_suit:
+            return True
+        elif self.suit != first_suit and other.suit == first_suit:
+            return False
 
         # if both suits are not trump
         if self.suit != trump and other.suit != trump:
             if self.suit == first_suit and other.suit == first_suit:
                 pass
             elif self.suit != first_suit and other.suit != first_suit:
-                # TODO: don't think this pass is possible
-                pass
+                return False
+
             elif self.suit == first_suit and other.suit != first_suit:
                 return True
             elif self.suit != first_suit and other.suit == first_suit:
@@ -154,8 +161,39 @@ class Player:
         """
         Sort cards according to suit
         """
-        # TODO: sort based on current trump setting
-        self.cards = sorted(self.cards, key=lambda card: str(card).split("of")[1])
+        # left bower trickery
+        if trump == "Hearts":
+            left = "Diamonds"
+        elif trump == "Diamonds":
+            left = "Hearts"
+        elif trump == "Spades":
+            left = "Clubs"
+        elif trump == "Clubs":
+            left = "Spades"
+        else:
+            left = None
+        for card in self.cards:
+            if card.suit == left and card.value == "Jack":
+                card.suit = trump
+                card.value = "Left"
+
+        def sort_order(card):
+            if card.suit == trump:
+                values = ["9", "10", "Queen", "King", "Ace", "Left", "Jack"]
+                return values.index(card.value)
+            else:
+                values = ["9", "10", "Jack", "Queen", "King", "Ace"]
+                return values.index(card.value)
+
+        self.cards = sorted(
+            self.cards, key=lambda card: (str(card).split("of")[1], sort_order(card))
+        )
+
+        # change left name back
+        for card in self.cards:
+            if card.value == "Left":
+                card.suit = left
+                card.value = "Jack"
 
     def __str__(self):
         self.sort_cards()
@@ -208,3 +246,19 @@ if __name__ == "__main__":
     c2 = Card("10", "Spades")
 
     print(f"{trump}\n{c1} > {c2}: {c1>c2}")
+
+    # Hearts trump
+    trump = "Hearts"
+    player = Player(
+        "Bob",
+        [
+            Card("9", "Hearts"),
+            Card("10", "Clubs"),
+            Card("Jack", "Hearts"),
+            Card("Ace", "Spades"),
+            Card("King", "Diamonds"),
+            Card("Jack", "Diamonds"),
+        ],
+        False,
+    )
+    print(player)
