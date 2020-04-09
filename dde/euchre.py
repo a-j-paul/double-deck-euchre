@@ -7,9 +7,11 @@ SUITS = ["Spades", "Clubs", "Hearts", "Diamonds"]
 VALUES = ["9", "10", "Jack", "Queen", "King", "Ace"]
 PLAYER_NAMES = ["Me", "P1", "Partner", "P2"]
 WINNING_SCORE = 52
-trump = None
+# trump = None
 # first suit played for a given trick
 first_suit = None
+teams = {1: [], 2: []}
+bidding_team = None
 
 
 class Card:
@@ -24,7 +26,7 @@ class Card:
     def __str__(self) -> str:
         return f"{self.value} of {self.suit}"
 
-    def __gt__(self, other: Card) -> bool:
+    def __gt__(self, other) -> bool:
         # left bower trickery
         if trump == "Hearts":
             left = "Diamonds"
@@ -84,9 +86,11 @@ class Card:
             return False
 
     def get_suit(self) -> str:
+        """ Card suit """
         return self.suit
 
     def get_value(self) -> str:
+        """ Card value """
         return self.value
 
 
@@ -138,14 +142,16 @@ class Player:
         self.is_dealer = is_dealer
 
     def get_name(self) -> str:
+        """ Player name """
         return self.name
 
-    def get_card(self, index: int) -> Card:
+    def get_card(self, index: int, remove_card: bool = True) -> Card:
         """
         Remove chosen card from hand
         """
         chosen_card = self.cards[index]
-        del self.cards[index]
+        if remove_card:
+            del self.cards[index]
         return chosen_card
 
     def set_card(self, card: Card) -> None:
@@ -155,6 +161,7 @@ class Player:
         self.cards.append(card)
 
     def set_cards(self, cards: list) -> None:
+        """ Add multiple cards to hand """
         self.cards = cards
 
     def sort_cards(self) -> None:
@@ -307,10 +314,12 @@ def play_trick(players, first_player: Player) -> dict:
     return trick_results
 
 
-def update_hand_results(trick_results: dict, hand_results: dict = {}) -> dict:
+def update_hand_results(trick_results: dict, hand_results: dict = None) -> dict:
     """
     Track scores after each trick is played
     """
+    if hand_results is None:
+        hand_results = {}
     hand_results.setdefault("Bidding Team Score", 0)
     hand_results.setdefault("Opposing Team Score", 0)
 
@@ -321,16 +330,26 @@ def update_hand_results(trick_results: dict, hand_results: dict = {}) -> dict:
     return hand_results
 
 
-if __name__ == "__main__":
+def play_game():
+    """
+    Play game
+    """
     # setup game
     # build list of players
+    global trump
+    global bidding_team
+    global first_suit
+
     players = []
     for player_name in PLAYER_NAMES:
         players.append(Player(player_name, [], False))
     players = deque(players)
 
     # establish teams
-    teams = {1: [players[0], players[2]], 2: [players[1], players[3]]}
+    teams[1].append(players[0])
+    teams[1].append(players[2])
+    teams[2].append(players[1])
+    teams[2].append(players[3])
 
     # set team scores to 0
     score = {1: 0, 2: 0}
@@ -448,3 +467,7 @@ if __name__ == "__main__":
         hand_number = hand_number + 1
 
     print(score)
+
+
+if __name__ == "__main__":
+    play_game()
