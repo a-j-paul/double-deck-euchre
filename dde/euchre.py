@@ -3,15 +3,12 @@ from random import shuffle
 from itertools import cycle
 from collections import deque
 
+import config
+
 SUITS = ["Spades", "Clubs", "Hearts", "Diamonds"]
 VALUES = ["9", "10", "Jack", "Queen", "King", "Ace"]
 PLAYER_NAMES = ["Me", "P1", "Partner", "P2"]
 WINNING_SCORE = 52
-# trump = None
-# first suit played for a given trick
-first_suit = None
-teams = {1: [], 2: []}
-bidding_team = None
 
 
 class Card:
@@ -28,61 +25,61 @@ class Card:
 
     def __gt__(self, other) -> bool:
         # left bower trickery
-        if trump == "Hearts":
+        if config.trump == "Hearts":
             left = "Diamonds"
-        elif trump == "Diamonds":
+        elif config.trump == "Diamonds":
             left = "Hearts"
-        elif trump == "Spades":
+        elif config.trump == "Spades":
             left = "Clubs"
-        elif trump == "Clubs":
+        elif config.trump == "Clubs":
             left = "Spades"
         else:
             left = None
 
         if self.suit == left and self.value == "Jack":
-            self.suit = trump
+            self.suit = config.trump
             self.value = "Left"
         if other.suit == left and self.value == "Jack":
-            other.suit = trump
+            other.suit = config.trump
             other.value = "Left"
 
-        # high and low trump
-        if self.suit == first_suit and other.suit == first_suit:
-            if trump == "Low":
+        # high and low config.trump
+        if self.suit == config.first_suit and other.suit == config.first_suit:
+            if config.trump == "Low":
                 values = ["Ace", "King", "Queen", "Jack", "10", "9"]
                 return values.index(self.value) > values.index(other.value)
-            if trump == "High":
+            if config.trump == "High":
                 values = ["9", "10", "Jack", "Queen", "King", "Ace"]
                 return values.index(self.value) > values.index(other.value)
-        elif self.suit != first_suit and other.suit != first_suit:
+        elif self.suit != config.first_suit and other.suit != config.first_suit:
             return False
-        elif self.suit == first_suit and other.suit != first_suit:
+        elif self.suit == config.first_suit and other.suit != config.first_suit:
             return True
-        elif self.suit != first_suit and other.suit == first_suit:
+        elif self.suit != config.first_suit and other.suit == config.first_suit:
             return False
 
-        # if both suits are not trump
-        if self.suit != trump and other.suit != trump:
-            if self.suit == first_suit and other.suit == first_suit:
+        # if both suits are not config.trump
+        if self.suit != config.trump and other.suit != config.trump:
+            if self.suit == config.first_suit and other.suit == config.first_suit:
                 pass
-            elif self.suit != first_suit and other.suit != first_suit:
+            elif self.suit != config.first_suit and other.suit != config.first_suit:
                 return False
 
-            elif self.suit == first_suit and other.suit != first_suit:
+            elif self.suit == config.first_suit and other.suit != config.first_suit:
                 return True
-            elif self.suit != first_suit and other.suit == first_suit:
+            elif self.suit != config.first_suit and other.suit == config.first_suit:
                 return False
             values = ["9", "10", "Jack", "Queen", "King", "Ace"]
             return values.index(self.value) > values.index(other.value)
-        # if both suits are trump
-        elif self.suit == trump and other.suit == trump:
+        # if both suits are config.trump
+        elif self.suit == config.trump and other.suit == config.trump:
             values = ["9", "10", "Queen", "King", "Ace", "Left", "Jack"]
             return values.index(self.value) > values.index(other.value)
-        # if played card is trump and other is not
-        elif self.suit == trump and other.suit != trump:
+        # if played card is config.trump and other is not
+        elif self.suit == config.trump and other.suit != config.trump:
             return True
-        # if other card is trump and played card is not
-        elif self.suit != trump and other.suit == trump:
+        # if other card is config.trump and played card is not
+        elif self.suit != config.trump and other.suit == config.trump:
             return False
 
     def get_suit(self) -> str:
@@ -169,23 +166,23 @@ class Player:
         Sort cards according to suit
         """
         # left bower trickery
-        if trump == "Hearts":
+        if config.trump == "Hearts":
             left = "Diamonds"
-        elif trump == "Diamonds":
+        elif config.trump == "Diamonds":
             left = "Hearts"
-        elif trump == "Spades":
+        elif config.trump == "Spades":
             left = "Clubs"
-        elif trump == "Clubs":
+        elif config.trump == "Clubs":
             left = "Spades"
         else:
             left = None
         for card in self.cards:
             if card.suit == left and card.value == "Jack":
-                card.suit = trump
+                card.suit = config.trump
                 card.value = "Left"
 
         def sort_order(card: Card) -> int:
-            if card.suit == trump:
+            if card.suit == config.trump:
                 values = ["9", "10", "Queen", "King", "Ace", "Left", "Jack"]
                 return values.index(card.value)
             else:
@@ -235,7 +232,9 @@ def get_bid() -> dict:
 
     # if bid was not passed then get suit
     if bid["value"] != "pass":
-        bid["trump"] = input(f"Select trump suit: high, low, {', '.join(SUITS)}: ")
+        bid["trump"] = input(
+            f"Select config.trump suit: high, low, {', '.join(SUITS)}: "
+        )
     else:
         bid["trump"] = "pass"
 
@@ -301,6 +300,8 @@ def play_trick(players, first_player: Player) -> dict:
             # handle non-numeric responses
             if not played.isnumeric():
                 played = len(player) + 1
+            elif int(played) < 1:
+                played = len(player) + 1
             else:
                 played = int(played)
         played_card = player.get_card(int(played) - 1)
@@ -323,7 +324,7 @@ def update_hand_results(trick_results: dict, hand_results: dict = None) -> dict:
     hand_results.setdefault("Bidding Team Score", 0)
     hand_results.setdefault("Opposing Team Score", 0)
 
-    if trick_results["Trick Winner"] in teams[bidding_team]:
+    if trick_results["Trick Winner"] in config.teams[config.bidding_team]:
         hand_results["Bidding Team Score"] = hand_results["Bidding Team Score"] + 1
     else:
         hand_results["Opposing Team Score"] = hand_results["Opposing Team Score"] + 1
@@ -336,20 +337,17 @@ def play_game():
     """
     # setup game
     # build list of players
-    global trump
-    global bidding_team
-    global first_suit
 
     players = []
     for player_name in PLAYER_NAMES:
         players.append(Player(player_name, [], False))
     players = deque(players)
 
-    # establish teams
-    teams[1].append(players[0])
-    teams[1].append(players[2])
-    teams[2].append(players[1])
-    teams[2].append(players[3])
+    # establish config.teams
+    config.teams[1].append(players[0])
+    config.teams[1].append(players[2])
+    config.teams[2].append(players[1])
+    config.teams[2].append(players[3])
 
     # set team scores to 0
     score = {1: 0, 2: 0}
@@ -415,15 +413,15 @@ def play_game():
             partner_provides_3_cards(partner, highest_bidder)
 
         # track team that made winning bid
-        if highest_bidder in teams[1]:
-            bidding_team = 1
+        if highest_bidder in config.teams[1]:
+            config.bidding_team = 1
             opposing_team = 2
         else:
-            bidding_team = 2
+            config.bidding_team = 2
             opposing_team = 1
 
-        # track winning trump
-        trump = highest_bid_trump
+        # track winning config.trump
+        config.trump = highest_bid_trump
         print(
             f"BIDDING OVER. {highest_bid} {highest_bid_trump} made by {highest_bidder.name}"
         )
@@ -447,16 +445,16 @@ def play_game():
         # bidding team euchred
         if hand_results["Bidding Team Score"] < highest_bid:
             if alone:
-                score[bidding_team] = score[bidding_team] - 24
+                score[config.bidding_team] = score[config.bidding_team] - 24
             else:
-                score[bidding_team] = score[bidding_team] - highest_bid
+                score[config.bidding_team] = score[config.bidding_team] - highest_bid
         # bidding team successful
         else:
             if alone:
-                score[bidding_team] = score[bidding_team] + 24
+                score[config.bidding_team] = score[config.bidding_team] + 24
             else:
-                score[bidding_team] = (
-                    score[bidding_team] + hand_results["Bidding Team Score"]
+                score[config.bidding_team] = (
+                    score[config.bidding_team] + hand_results["Bidding Team Score"]
                 )
         score[opposing_team] = (
             score[opposing_team] + hand_results["Opposing Team Score"]

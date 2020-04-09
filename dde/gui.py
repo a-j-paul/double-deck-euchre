@@ -3,15 +3,14 @@ from euchre import *
 
 import tkinter as tk
 
-trump = ""
+import config
 
 
 class Euchre_GUI:
     def __init__(self, master):
         self.master = master
         master.title("Double Deck Euchre")
-        global trump
-        trump = "Hearts"
+        config.trump = "Hearts"
         deck = Deck()
         deck.shuffle()
         p1 = Player("Player 1", [], False)
@@ -23,7 +22,7 @@ class Euchre_GUI:
             master.rowconfigure(i, weight=1, minsize=50)
 
             for j in range(0, 4):
-                converter = lambda x: "dark green" if x == trump else "yellow"
+                converter = lambda x: "dark green" if x == config.trump else "yellow"
                 frame = tk.Frame(
                     master=master,
                     relief=tk.RAISED,
