@@ -84,6 +84,20 @@ class Card:
 
     def get_suit(self) -> str:
         """ Card suit """
+        # left bower trickery
+        if config.trump == "Hearts":
+            left = "Diamonds"
+        elif config.trump == "Diamonds":
+            left = "Hearts"
+        elif config.trump == "Spades":
+            left = "Clubs"
+        elif config.trump == "Clubs":
+            left = "Spades"
+        else:
+            left = None
+
+        if self.suit == left and self.value == "Jack":
+            return config.trump
         return self.suit
 
     def get_value(self) -> str:
