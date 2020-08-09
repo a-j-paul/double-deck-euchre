@@ -4,6 +4,7 @@ Python CLI and GUI implementation of double deck/bid euchre using only the Pytho
 
 ## Screenshots
 ![GUI](./data/images/gui_20200808.png)
+
 *Ugly text buttons to be replaced with picture representations of the cards*
 
 ## Links
