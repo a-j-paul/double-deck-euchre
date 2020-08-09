@@ -198,10 +198,10 @@ class Player:
         def sort_order(card: Card) -> int:
             if card.suit == config.trump:
                 values = ["9", "10", "Queen", "King", "Ace", "Left", "Jack"]
-                return values.index(card.value)
             else:
                 values = ["9", "10", "Jack", "Queen", "King", "Ace"]
-                return values.index(card.value)
+
+            return values.index(card.value)
 
         self.cards = sorted(
             self.cards, key=lambda card: (str(card).split("of")[1], sort_order(card))
